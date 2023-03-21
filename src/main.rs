@@ -1,3 +1,4 @@
+
 use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision}, 
@@ -12,6 +13,8 @@ const GRAVITY: f32 = -12.0;
 const SCREEN_WIDTH: f32 = 1200.;
 const SCREEN_HEIGHT: f32 = 600.;
 const SPAWN_POINT: Vec3 = Vec3::new(-200.0,60.0,0.0);
+
+const DEBUG_LINES: bool = false;
 
 fn main() {
     App::new()
@@ -88,7 +91,7 @@ fn setup(
     //platforms
     spawn_platform(&mut commands, Vec3::new(-200.,25.,0.0), Vec3::new(150., 10., 1.0));
     spawn_platform(&mut commands, Vec3::new(200.,-50.,0.0), Vec3::new(100., 10., 1.0));
-    spawn_platform(&mut commands, Vec3::new(000.,150.,0.0), Vec3::new(10., 200., 1.0));
+    spawn_hazard(&mut commands, Vec3::new(000.,180.,0.0), Vec3::new(10., 300., 1.0));
     spawn_platform(&mut commands, Vec3::new(250.,100.,0.0), Vec3::new(50., 10., 1.0));
     spawn_platform(&mut commands, Vec3::new(350.,200.,0.0), Vec3::new(100., 10., 1.0));
     spawn_hazard(&mut commands, Vec3::new(0.,-300.,0.0), Vec3::new(10000., 20., 1.0));
@@ -153,18 +156,21 @@ fn check_for_collisions(
     mut player_query: Query<(&mut Velocity, &Transform), With<Player>>,
     mut player_data_query: Query<&mut Player>,
     collider_query: Query<(Entity, &Transform, Option<&Hazard>), With<Collider>>,
-    //lines: ResMut<DebugLines>,
+    mut lines: ResMut<DebugLines>,
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
-    /*draw_debug_rect(
-        lines,
-        player_transform.as_ref()
-    );*/
+    if DEBUG_LINES {
+        draw_debug_rect(&mut lines, player_transform);
+    }
 
     let mut any_collision: bool = false;
     
     //Check collision with obstacles
     for (_collider_entity, transform, maybe_hazard) in &collider_query {
+        if DEBUG_LINES {
+            draw_debug_rect(&mut lines, transform);
+        }
+
         let collision = collide(
             player_transform.translation,
             player_transform.scale.truncate(),
@@ -203,8 +209,8 @@ fn check_for_collisions(
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Debugging
-/*
-fn draw_debug_rect(mut lines: ResMut<DebugLines>, transform: &Transform) {
+
+fn draw_debug_rect(lines: &mut ResMut<DebugLines>, transform: &Transform) {
     let corners = get_sprite_corners(transform);
     let duration = 0.0;     // Duration of 0 will show the line for 1 frame.
     lines.line(corners[0], corners[1], duration);
@@ -225,7 +231,7 @@ fn get_sprite_corners(transform: &Transform) -> [Vec3; 4] {
 
     [top_left, top_right, bottom_left, bottom_right]
 }
-*/
+
 ///////////////////////////////////////////////////////////////////////////////////
 /// Controls
 
@@ -253,7 +259,7 @@ fn move_player(
             if player_velocity.0.x > -200.0 { player_velocity.0.x += -12.0 }
             if player_velocity.0.x > 0.0 { player_velocity.0.x -= 35.0 }
         }
-        else if direction == 0 {
+        else if direction == 0 { //Handles friction
             if      player_velocity.0.x > 20.0  { player_velocity.0.x -= 15.0} 
             else if player_velocity.0.x < -20.0 { player_velocity.0.x += 15.0}
             else                               { player_velocity.0.x =  0.0} 
@@ -273,7 +279,7 @@ fn move_player(
         match direction {
             -1 => 
                 if player_velocity.0.x > -200.0 { player_velocity.0.x += -12.0 },
-            0 =>
+            0 => //Handles air resistance
                 if      player_velocity.0.x > 2.0  { player_velocity.0.x -= 1.0} 
                 else if player_velocity.0.x < -2.0 { player_velocity.0.x += 1.0}
                 else                               { player_velocity.0.x =  0.0} ,
@@ -294,11 +300,13 @@ fn move_player(
 }
 
 fn zone_transition( //Also death
+    mut velocity_query: Query<&mut Velocity, With<Player>>,
     mut query: Query<&mut Transform, With<Player>>,
     mut player_data_query: Query<&mut Player>,
 ) {
     if player_data_query.single_mut().dead {
         query.single_mut().translation = SPAWN_POINT;
+        velocity_query.single_mut().0 = Vec2::new(0.,0.);
         player_data_query.single_mut().dead = false;
     }
 
