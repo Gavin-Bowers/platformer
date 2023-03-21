@@ -9,9 +9,9 @@ use bevy_prototype_debug_lines::*;
 const TIME_STEP: f32 = 1.0 / 60.0;
 const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.05, 0.05);
 const GRAVITY: f32 = -12.0;
-const SCREEN_WIDTH: f32 = 800.;
+const SCREEN_WIDTH: f32 = 1200.;
 const SCREEN_HEIGHT: f32 = 600.;
-const SPAWN_POINT: Vec3 = Vec3::new(0.0,60.0,0.0);
+const SPAWN_POINT: Vec3 = Vec3::new(-200.0,60.0,0.0);
 
 fn main() {
     App::new()
@@ -86,16 +86,19 @@ fn setup(
     ));
 
     //platforms
-    spawn_platform(&mut commands, Vec3::new(0.,0.,0.0), Vec3::new(200., 10., 1.0));
-    spawn_platform(&mut commands, Vec3::new(400.,50.,0.0), Vec3::new(100., 10., 1.0));
-    spawn_hazard(&mut commands, Vec3::new(0.,0.,0.0), Vec3::new(1000., 10., 1.0));
+    spawn_platform(&mut commands, Vec3::new(-200.,25.,0.0), Vec3::new(150., 10., 1.0));
+    spawn_platform(&mut commands, Vec3::new(200.,-50.,0.0), Vec3::new(100., 10., 1.0));
+    spawn_platform(&mut commands, Vec3::new(000.,150.,0.0), Vec3::new(10., 200., 1.0));
+    spawn_platform(&mut commands, Vec3::new(250.,100.,0.0), Vec3::new(50., 10., 1.0));
+    spawn_platform(&mut commands, Vec3::new(350.,200.,0.0), Vec3::new(100., 10., 1.0));
+    spawn_hazard(&mut commands, Vec3::new(0.,-300.,0.0), Vec3::new(10000., 20., 1.0));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Objects
 
 fn spawn_platform(
-    mut commands: &mut Commands,
+    commands: &mut Commands,
     position: Vec3,
     scale: Vec3, ) {
     commands.spawn((
@@ -116,7 +119,7 @@ fn spawn_platform(
 }
 
 fn spawn_hazard(
-    mut commands: &mut Commands,
+    commands: &mut Commands,
     position: Vec3,
     scale: Vec3, ) {
     commands.spawn((
@@ -150,7 +153,7 @@ fn check_for_collisions(
     mut player_query: Query<(&mut Velocity, &Transform), With<Player>>,
     mut player_data_query: Query<&mut Player>,
     collider_query: Query<(Entity, &Transform, Option<&Hazard>), With<Collider>>,
-    lines: ResMut<DebugLines>,
+    //lines: ResMut<DebugLines>,
 ) {
     let (mut player_velocity, player_transform) = player_query.single_mut();
     /*draw_debug_rect(
@@ -290,10 +293,15 @@ fn move_player(
     //Ignoring climbing for now because it's a little harder to implement
 }
 
-fn zone_transition(
+fn zone_transition( //Also death
     mut query: Query<&mut Transform, With<Player>>,
     mut player_data_query: Query<&mut Player>,
 ) {
+    if player_data_query.single_mut().dead {
+        query.single_mut().translation = SPAWN_POINT;
+        player_data_query.single_mut().dead = false;
+    }
+
     if  query.single_mut().translation.x > SCREEN_WIDTH / 2.0 { query.single_mut().translation.x = SCREEN_WIDTH / -2.0 }
     if  query.single_mut().translation.x < SCREEN_WIDTH / -2.0 { query.single_mut().translation.x = SCREEN_WIDTH / 2.0 }
     if  query.single_mut().translation.y > SCREEN_HEIGHT / 2.0 { query.single_mut().translation.y = SCREEN_HEIGHT / -2.0 }
